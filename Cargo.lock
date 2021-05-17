@@ -423,6 +423,7 @@ dependencies = [
  "anyhow",
  "dotenv",
  "futures",
+ "http",
  "reqwest",
  "serde",
  "serde_json",
