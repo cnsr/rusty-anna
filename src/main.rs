@@ -38,7 +38,8 @@ async fn main() -> Result<(), anyhow::Error> {
     let con = connection::ChanConnection::init(
         anna_cookie, url, post_url,
     ).await?;
-
+    
+    loop {
     let _greeting = message::OutboundMessage {
         chat: String::from("int"),
         name: Some(String::from("salobot")),
@@ -50,8 +51,7 @@ async fn main() -> Result<(), anyhow::Error> {
     //  notify about successful connection
     post_message(&con, _greeting).await?;
 
-    loop {
-        get_messages(&con).await?;
+        // get_messages(&con).await?;
     }
 
 }

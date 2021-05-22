@@ -1,9 +1,24 @@
 extern crate reqwest;
 extern crate anyhow;
+extern crate serde_json;
 
-use crate::message::{InboundMessage, MessageQueue, OutboundMessage};
+// external
 use http::{HeaderMap, HeaderValue, header::{COOKIE}};
 
+// local
+use crate::message::{InboundMessage, MessageQueue, OutboundMessage, PostResult};
+
+
+struct BotConfiguration {
+    pub name: String,
+    pub trip: String
+}
+
+// impl BotConfiguration {
+//     pub async fn init() -> Result<Self, anyhow::Error> {
+
+//     }
+// }
 
 #[derive(Debug)]
 pub struct ChanConnection {
@@ -57,27 +72,33 @@ impl ChanConnection {
         return result;
     }
 
-    pub fn construct_reply_text(&self, text: String) -> String {
-        return format!(">>{}\n{}", self.lastpost, text);
+    pub fn construct_reply_text(&self, text: String, to: Option<u32>) -> String {
+        let postnumber = match to {
+            Some(number) => number,
+            None => self.lastpost
+        };
+        return format!(">>{}\n{}", postnumber, text);
     }
 
     pub async fn add_to_queue(&mut self, message: InboundMessage) -> Result<(), anyhow::Error> {
         //  TODO: check for messages in the outbouund history
-        let is_bot = false;
+        let is_bot = self.queue.check_if_outbound(message.clone()).await?;
         self.lastpost = message.count;
         self.queue.add_to_queue(message, is_bot).await?;
         Ok(())
     }
 
-    // pub fn construct_reply(&self, message: InboundMessage) -> OutboundMessage {
-    //     return OutboundMessage {
-    //         chat: message.chat,
-    //         pub name: Option<String>,
-    //         pub trip: Option<String>,
-    //         pub body: String,
-    //         pub convo: String,
-    //     };
-    // }
+    // TODO: add a config to have where to pull the variables from
+    pub fn construct_reply(&self, message: InboundMessage) -> OutboundMessage {
+        // construct a reply for an outbound message
+        return OutboundMessage {
+            chat: message.chat,
+            name: None,
+            trip: None,
+            body: self.construct_reply_text(String::from("Reply"), Some(message.count)),
+            convo: message.convo,
+        };
+    }
 
     pub async fn process_messages(&self, messages: Vec<InboundMessage>) -> Result<(), anyhow::Error> {
         // TODO: implement
@@ -99,5 +120,41 @@ impl ChanConnection {
                 HeaderValue::from_str(&format!("nolimitcookie={}", self.anna_cookie)).unwrap()
             );
         return headers;
+    }
+
+    pub async fn send_message(&self, message: OutboundMessage) -> Result<bool, anyhow::Error> {
+        let serialized_message = serde_json::json!(&message);
+
+        let response = self.client
+            .post(&self.post_url)
+            // .post("https://jsonplaceholder.typicode.com/posts")
+            .headers(self.headers())
+            // .form(&serialized_message)
+            .json(&serialized_message)
+            .send()
+            .await?
+            .text()
+            .await?;
+
+        let post_result: PostResult = serde_json::from_str(&response)?;
+        Ok(post_result.failed_to_send())
+    }
+
+    pub async fn attempt_sending_outbound(&mut self) -> Result<(), anyhow::Error> {
+        match self.queue.first_to_send() {
+            Some(message) => {
+                let result: bool = self.send_message(message.clone()).await?;
+                match result {
+                    false => {
+                        self.queue.append_as_first(message);
+                    },
+                    _ => return Ok(())
+                }
+                return Ok(());
+            },
+            None => {
+                return Ok(());
+            }
+        }
     }
 }
