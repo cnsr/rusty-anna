@@ -35,23 +35,24 @@ async fn main() -> Result<(), anyhow::Error> {
     
     // TODO: load chat, name and trip from env variables and save in the connection
 
-    let con = connection::ChanConnection::init(
+    let mut con = connection::ChanConnection::init(
         anna_cookie, url, post_url,
     ).await?;
     
     loop {
-    let _greeting = message::OutboundMessage {
-        chat: String::from("int"),
-        name: Some(String::from("salobot")),
-        trip: Some(String::from("test")),
-        body: String::from("Connected to the chat."),
-        convo: String::from("GeneralDEBUG"),
-    };
+        let _greeting = message::OutboundMessage {
+            chat: String::from("int"),
+            name: Some(String::from("salobot")),
+            trip: Some(String::from("test")),
+            body: String::from("Connected to the chat."),
+            convo: String::from("GeneralDEBUG"),
+        };
 
     //  notify about successful connection
-    post_message(&con, _greeting).await?;
+        con.add_to_outbound_queue(_greeting).await?;
+        con.attempt_sending_outbound().await?;
 
-        // get_messages(&con).await?;
+        get_messages(&con).await?;
     }
 
 }
@@ -74,39 +75,5 @@ async fn get_messages(con: &connection::ChanConnection) -> Result<(), anyhow::Er
     // println!("\n\n\nfirst: {:#?}", messages[0]);
     
     sleep(Duration::from_millis(250)).await;
-    Ok(())
-}
-
-
-async fn post_message(con: &connection::ChanConnection, message: message::OutboundMessage) -> Result<(), anyhow::Error> {
-    let serialized_message = serde_json::json!(&message);
-    // let serialized_message = serde_json::to_value(&message)?;
-    println!("data: {:#?}", &serialized_message);
-
-    let a_request = con.client
-    .post(&con.post_url)
-    // .post("https://jsonplaceholder.typicode.com/posts")
-    .headers(con.headers())
-    .form(&serialized_message);
-
-    println!("{:#?}", a_request);
-
-    let response = con.client
-        .post(&con.post_url)
-        // .post("https://jsonplaceholder.typicode.com/posts")
-        .headers(con.headers())
-        // .form(&serialized_message)
-        .json(&serialized_message)
-        .send()
-        .await?
-        .text()
-        .await?;
-
-    // let json_response: serde_json::Value = serde_json::from_str(&response)?;
-    println!("response: {:#?}", response);
-
-    // the response should be {"success":"success_posting","id":5171570}
-    // what i am getting is "{\"failure\":\"database_update_error\"}"
-    
     Ok(())
 }

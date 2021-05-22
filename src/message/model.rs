@@ -134,6 +134,11 @@ impl MessageQueue {
         self.outbound_messages.insert_as_first(first_item).unwrap();
     }
 
+    pub async fn add_to_outbound_queue(&mut self, message: OutboundMessage) -> Result<(), anyhow::Error> {
+        self.outbound_messages.push(message);
+        Ok(())
+    }
+
     pub async fn add_to_queue(&mut self, message: InboundMessage, is_bot: bool) -> Result<()> {
         match is_bot {
             true => {

@@ -81,7 +81,7 @@ impl ChanConnection {
     }
 
     pub async fn add_to_queue(&mut self, message: InboundMessage) -> Result<(), anyhow::Error> {
-        //  TODO: check for messages in the outbouund history
+        //  TODO: check for messages in the outbound history
         let is_bot = self.queue.check_if_outbound(message.clone()).await?;
         self.lastpost = message.count;
         self.queue.add_to_queue(message, is_bot).await?;
@@ -120,6 +120,11 @@ impl ChanConnection {
                 HeaderValue::from_str(&format!("nolimitcookie={}", self.anna_cookie)).unwrap()
             );
         return headers;
+    }
+
+    pub async fn add_to_outbound_queue(&mut self, message: OutboundMessage) -> Result<(), anyhow::Error> {
+        self.queue.add_to_outbound_queue(message).await?;
+        Ok(())
     }
 
     pub async fn send_message(&self, message: OutboundMessage) -> Result<bool, anyhow::Error> {
