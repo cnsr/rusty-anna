@@ -40,6 +40,7 @@ pub struct InboundMessage {
     pub chat: String,
     pub convo: String,
     pub count: u32,
+    // in some rare cases the country value is missing
     pub country: Option<String>,
     pub country_name: Option<String>,
     pub date: String,
@@ -174,11 +175,26 @@ impl MessageQueue {
         Ok(())
     }
 
-    // pub async fn cleanup(&mut self) -> Result<(), anyhow::Error> {
-    //     if (self.messages.length)
-    // }
+    pub async fn cleanup(&mut self) -> Result<(), anyhow::Error> {
+        // this might be very bad
+        while self.messages.len() as u8 > self.limit_messages {
+            self.messages.remove(0);
+        }
+        while self.bot_messages.len() as u8 > self.limit_bot_messages {
+            self.bot_messages.remove(0);
+        }
+        while self.outbound_messages_history.len() as u8 > self.limit_outbound_messages {
+            self.messages.remove(0);
+        }
+        Ok(())
+    }
 
     pub async fn check_if_outbound(&mut self, message: InboundMessage) -> Result<bool, anyhow::Error> {
+        for outbound_message in &self.outbound_messages_history {
+            if outbound_message.to_owned() == message {
+                return Ok(true);
+            }
+        }
         Ok(false)
     }
 }
