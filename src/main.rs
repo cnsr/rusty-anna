@@ -30,16 +30,27 @@ async fn main() -> Result<(), anyhow::Error> {
     let board = env::var("BOARD")
         .expect("BOARD is not set in the .env file");
 
-    let url = format!("https://{}/last/{}/", domain, board);
+    let name = env::var("NAME")
+        .expect("NAME is not set in the .env file");
+
+    // FIXME: tripcode doesnt actually do anything - need to figure out why
+    let trip = env::var("TRIP")
+        .expect("TRIP is not set in the .env file");
+
+    let get_url = format!("https://{}/last/{}/", domain, board);
     let post_url = format!("https://{}/chat/{}/", domain, board);
     
     // TODO: load chat, name and trip from env variables and save in the connection
 
     let mut con = connection::ChanConnection::init(
-        anna_cookie, url, post_url,
+        anna_cookie, get_url, post_url, name, trip
     ).await?;
     
     loop {
+        // retrieve the latest messages
+        con.get_and_process_messages().await?;
+
+        // this is temporary
         let _greeting = message::OutboundMessage {
             chat: String::from("int"),
             name: Some(String::from("salobot")),
@@ -48,32 +59,11 @@ async fn main() -> Result<(), anyhow::Error> {
             convo: String::from("GeneralDEBUG"),
         };
 
-    //  notify about successful connection
+        //  notify about successful connection
         con.add_to_outbound_queue(_greeting).await?;
         con.attempt_sending_outbound().await?;
 
-        get_messages(&con).await?;
+        // timeout should be at the very least 1 second between running the loop cycles
+        sleep(Duration::from_millis(1000)).await;
     }
-
-}
-
-async fn get_messages(con: &connection::ChanConnection) -> Result<(), anyhow::Error> {
-    let response = con.client
-        .get(&con.get_url())
-        .headers(con.headers())
-        .send()
-        .await?
-        .text()
-        .await?;
-        
-    let messages: Vec<message::InboundMessage> = serde_json::from_str(&response).unwrap();
-
-    con.process_messages(messages).await?;
-
-    let plain_json: serde_json::Value = serde_json::from_str(&response)?;
-    // println!("\n\n{:#?}", plain_json);
-    // println!("\n\n\nfirst: {:#?}", messages[0]);
-    
-    sleep(Duration::from_millis(250)).await;
-    Ok(())
 }

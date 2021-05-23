@@ -9,20 +9,25 @@ use http::{HeaderMap, HeaderValue, header::{COOKIE}};
 use crate::message::{InboundMessage, MessageQueue, OutboundMessage, PostResult};
 
 
+#[derive(Debug)]
 struct BotConfiguration {
     pub name: String,
     pub trip: String
 }
 
-// impl BotConfiguration {
-//     pub async fn init() -> Result<Self, anyhow::Error> {
-
-//     }
-// }
+impl BotConfiguration {
+    pub async fn init(name: String, trip: String) -> Result<Self, anyhow::Error> {
+        Ok(Self {
+            name: name,
+            trip: trip,
+        })
+    }
+}
 
 #[derive(Debug)]
 pub struct ChanConnection {
     pub client: reqwest::Client,
+    config: BotConfiguration,
     pub lastpost: u32, // i really hope the 4294967295 will be enough lmao
     limit: u8,
     raw_get_url: String,
@@ -32,6 +37,8 @@ pub struct ChanConnection {
     /*
         TODO: implement a way to store a set of outbound messages (as InboundMessage)
         Would be great for the API to properly function first i guess else it's gonna be fugly
+
+        btw isnt this already implemented?
     */
 }
 
@@ -41,14 +48,19 @@ impl ChanConnection {
         anna_cookie: String,
         get_url: String,
         post_url: String,
+        name: String,
+        trip: String,
     ) -> Result<Self, anyhow::Error> {
         let client = reqwest::Client::builder()
             .cookie_store(true)
             .build()?;
         let queue = MessageQueue::init().await?;
 
+        let config = BotConfiguration::init(name, trip).await?;
+
         return Ok(Self {
             client: client,
+            config: config,
             lastpost: 0u32,
             limit: 1u8,
             queue: queue,
@@ -93,8 +105,8 @@ impl ChanConnection {
         // construct a reply for an outbound message
         return OutboundMessage {
             chat: message.chat,
-            name: None,
-            trip: None,
+            name: Some(self.config.name.clone()),
+            trip: Some(self.config.trip.clone()),
             body: self.construct_reply_text(String::from("Reply"), Some(message.count)),
             convo: message.convo,
         };
@@ -161,5 +173,20 @@ impl ChanConnection {
                 return Ok(());
             }
         }
+    }
+
+    pub async fn get_and_process_messages(&mut self) -> Result<(), anyhow::Error> {
+        let response = &self.client
+            .get(&self.get_url())
+            .headers(self.headers())
+            .send()
+            .await?
+            .text()
+            .await?;
+            
+        let messages: Vec<InboundMessage> = serde_json::from_str(&response).unwrap();
+
+        self.process_messages(messages).await?;
+        Ok(())
     }
 }

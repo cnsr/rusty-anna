@@ -12,6 +12,8 @@ This implementation uses a `MessageQueue` system which is kinda broken as of rig
 
  - [x] Working message retrieval
  - [x] Somewhat working message posting
+ - [ ] Inbound message processing
+ - [ ] Fix tripcodes not working
  - [ ] Properly working message posting from the queue
- - [ ] Loading bot commands from `commands.yml` file
+ - [ ] Loading some of the bot commands from a `commands.yml` file
  - [ ] Docker
