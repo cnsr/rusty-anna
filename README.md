@@ -21,7 +21,7 @@ commands:
         description: "command description"
         # it's planned that the regex will be evaluated
         # dynamically against each message
-        regex: "^\.regex$"
+        regex: "^\\.regex$"
         # option 1.
         # list of possible replies
         replies:

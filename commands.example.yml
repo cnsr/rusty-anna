@@ -1,12 +1,12 @@
 commands:
     example:
         description: "example command"
-        regex: "^\.test$"
+        regex: "^\\.test$"
         replies:
             - "hello"
             - "hi"
             - "test successful"
     weather:
         description: "get weather by location"
-        regex: "^\.w(eather)? (.+)$"
+        regex: "^\\.w(eather)? (.+)$"
         execute: "weather"
