@@ -8,6 +8,57 @@
 
 This implementation uses a `MessageQueue` system which is kinda broken as of right now as `POST`ing a message to the API doesn't return the expected response but instead returns an error.
 
+
+## Setting up commands
+
+Two planned ways of setting up commands are as specified in the `commands.example.yml` file.
+
+Basic markup:
+
+```yaml
+commands:
+    command_name:
+        description: "command description"
+        # it's planned that the regex will be evaluated
+        # dynamically against each message
+        regex: "^\.regex$"
+        # option 1.
+        # list of possible replies
+        replies:
+            - "hello"
+            - "hi"
+            - "test successful"
+        # option 2.
+        # you will have to manually add the matching execution
+        # to the command checker (which is a TODO at the moment)
+        execute: "execute_in_this_case"
+```
+
+Pseudocode command checker (very pseudo):
+
+```rust
+fn get_command_reply(command: Command, message_text: String) -> String {
+    match command.execute {
+        Some(executor) => {
+            match executor {
+                String::from("execute_in_this_case") => {
+                    // parse against regex
+                    return "Example return value";
+                }
+                _ => {
+                    return "Unknown command";
+                }
+            }
+        },
+        _ => {
+            // it's presumed we'll be checking the command.replies here
+            return "No executor specified";
+        }
+    }
+}
+```
+
+
 ## TODO:
 
  - [x] Working message retrieval

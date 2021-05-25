@@ -92,14 +92,19 @@ pub struct MessageQueue {
 }
 
 trait FirstPoppable {
-    fn pop_first(&mut self) -> Result<OutboundMessage, anyhow::Error>;
+    fn pop_first(&mut self) -> Option<OutboundMessage>;
     fn insert_as_first(&mut self, first_item: OutboundMessage) -> Result<(), anyhow::Error>;
 }
 
 impl FirstPoppable for Vec<OutboundMessage> {
-    fn pop_first(&mut self) -> Result<OutboundMessage, anyhow::Error> {
-        let first_item = self.remove(0);
-        Ok(first_item)
+    fn pop_first(&mut self) -> Option<OutboundMessage> {
+        match self.len() > 0 {
+            true => {
+                let first_item = self.remove(0);
+                Some(first_item)
+            },
+            false => None
+        }
     }
 
     fn insert_as_first(&mut self, first_item: OutboundMessage) -> Result<(), anyhow::Error> {
@@ -127,8 +132,7 @@ impl MessageQueue {
     }
 
     pub fn first_to_send(&mut self) -> Option<OutboundMessage> {
-        let message = self.outbound_messages.pop_first().unwrap();
-        return Some(message)
+        self.outbound_messages.pop_first()
     }
 
     pub fn append_as_first(&mut self, first_item: OutboundMessage) {
@@ -177,14 +181,20 @@ impl MessageQueue {
 
     pub async fn cleanup(&mut self) -> Result<(), anyhow::Error> {
         // this might be very bad
-        while self.messages.len() as u8 > self.limit_messages {
-            self.messages.remove(0);
+        if self.messages.len() > 0 {
+            while self.messages.len() as u8 > self.limit_messages {
+                self.messages.remove(0);
+            }
         }
-        while self.bot_messages.len() as u8 > self.limit_bot_messages {
-            self.bot_messages.remove(0);
+        if self.bot_messages.len() > 0 {
+            while self.bot_messages.len() as u8 > self.limit_bot_messages {
+                self.bot_messages.remove(0);
+            }
         }
-        while self.outbound_messages_history.len() as u8 > self.limit_outbound_messages {
-            self.messages.remove(0);
+        if self.outbound_messages_history.len() > 0 {
+            while self.outbound_messages_history.len() as u8 > self.limit_outbound_messages {
+                self.outbound_messages_history.remove(0);
+            }
         }
         Ok(())
     }

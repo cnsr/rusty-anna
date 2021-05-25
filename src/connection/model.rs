@@ -7,7 +7,7 @@ use http::{HeaderMap, HeaderValue, header::{COOKIE}};
 
 // local
 use crate::message::{InboundMessage, MessageQueue, OutboundMessage, PostResult};
-
+use crate::commands::{Command, CommandSet};
 
 #[derive(Debug)]
 struct BotConfiguration {
@@ -57,6 +57,8 @@ impl ChanConnection {
         let queue = MessageQueue::init().await?;
 
         let config = BotConfiguration::init(name, trip).await?;
+
+        let commands = CommandSet::init().await?;
 
         return Ok(Self {
             client: client,

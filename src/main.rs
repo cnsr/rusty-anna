@@ -10,6 +10,7 @@ extern crate anyhow;
 // local modules
 mod connection;
 mod message;
+mod commands;
 
 // external crates
 use dotenv::dotenv;
@@ -60,7 +61,7 @@ async fn main() -> Result<(), anyhow::Error> {
         };
 
         //  notify about successful connection
-        con.add_to_outbound_queue(_greeting).await?;
+        // con.add_to_outbound_queue(_greeting).await?;
         con.attempt_sending_outbound().await?;
 
         // timeout should be at the very least 1 second between running the loop cycles
