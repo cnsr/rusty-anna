@@ -1,17 +1,21 @@
 extern crate yaml_rust;
 extern crate anyhow;
 extern crate linked_hash_map;
+extern crate regex;
+extern crate rand;
 
 use yaml_rust::{YamlLoader, Yaml};
 use linked_hash_map::LinkedHashMap;
 use std::fs;
 use std::path::Path;
+use regex::Regex;
+use rand::seq::SliceRandom;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Command {
     pub name: Option<String>,
     pub description: Option<String>,
-    pub regex: String,
+    pub regex: Regex,
     pub replies: Option<Vec<String>>,
     pub execute: Option<String>,
 }
@@ -28,10 +32,12 @@ impl Command {
             let error_text = format!("Command {} does not provide either of replies or executor", regex);
             return Err(anyhow::Error::msg(error_text));
         }
+        let compiled_regex = Regex::new(&regex).unwrap();
+        // TODO: check for duplicates by regex
         Ok(Self {
             name: name,
             description: description,
-            regex: regex,
+            regex: compiled_regex,
             replies: replies,
             execute: execute,
         })
@@ -45,15 +51,26 @@ impl Command {
     }
 
     pub fn get_reply(&self) -> String {
-        String::from("Not Implemented")
+        // this looks like shit ngl
+        return self.replies.clone().unwrap().choose(&mut rand::thread_rng()).unwrap().to_string();
     }
 
     // TODO: implement checker for matches
-    pub fn check_agains(&self, text: String) {
-
+    // if a string is returned, reply has to be issued
+    pub fn check_against(&self, text: String) -> Option<String> {
+        if self.regex.is_match(&text) {
+            if self.replies != None {
+                return Some(self.get_reply());
+            } else {
+                // execute script
+                return Some(String::from("Requested command execution"));
+            }
+        }
+        None
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CommandSet {
     pub commands: Vec<Command>,
 }
@@ -101,6 +118,19 @@ impl CommandSet {
             },
             false => Ok(initial)
         }
+    }
+    pub fn check_against_commands(&self, text: String) -> Option<String> {
+        println!("checking {:#?}", text);
+        for command in self.commands.clone().into_iter() {
+            match command.check_against(text.clone()) {
+                Some(result) => {
+                    println!("COMMAND MATCH ON TEXT: {:#?} FOR COMMAND: {:#?}", text, command);
+                    return Some(result);
+                },
+                _ => {}
+            }
+        }
+        None
     }
 }
 

@@ -27,6 +27,7 @@ impl PostResult {
         return self.success != None;
     }
     pub fn failed_to_send(&self) -> bool {
+        println!("Checking PostResult: {:#?}", self);
         match &self.failure {
             Some(reason) => reason == "countdown_violation",
             None => false
