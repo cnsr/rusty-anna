@@ -51,6 +51,7 @@ async fn main() -> Result<(), anyhow::Error> {
         // retrieve the latest messages
         con.get_and_process_messages().await?;
 
+        // TODO: move out of the loop
         // this is temporary
         let _greeting = message::OutboundMessage {
             chat: String::from("int"),
@@ -60,7 +61,7 @@ async fn main() -> Result<(), anyhow::Error> {
             convo: String::from("GeneralDEBUG"),
         };
 
-        //  notify about successful connection
+        // notify about successful connection
         // con.add_to_outbound_queue(_greeting).await?;
         con.attempt_sending_outbound().await?;
 
