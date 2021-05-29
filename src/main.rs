@@ -1,4 +1,4 @@
-use std::{env, os::linux::raw};
+use std::env;
 // use std::path::Path;
 use tokio::time::{sleep, Duration};
 
@@ -38,13 +38,20 @@ async fn main() -> Result<(), anyhow::Error> {
     let trip = env::var("TRIP")
         .expect("TRIP is not set in the .env file");
 
+    let accept_invalid_certs = env::var("ACCEPT_INVALID_CERTS")
+        .expect("ACCEPT_INVALID_CERTS is not set in the .env file")
+        .into_bool();
+
     let get_url = format!("https://{}/last/{}/", domain, board);
     let post_url = format!("https://{}/chat/{}/", domain, board);
     
     // TODO: load chat, name and trip from env variables and save in the connection
 
     let mut con = connection::ChanConnection::init(
-        anna_cookie, get_url, post_url, name, trip
+        accept_invalid_certs,
+        anna_cookie,
+        get_url, post_url,
+        name, trip
     ).await?;
     
     loop {
@@ -69,5 +76,21 @@ async fn main() -> Result<(), anyhow::Error> {
         // timeout should be at the very least 1 second between running the loop cycles
         // TODO: cleanup
         sleep(Duration::from_millis(1000)).await;
+    }
+}
+
+trait IntoBool {
+    fn into_bool(self) -> bool;
+}
+
+impl IntoBool for String {
+    fn into_bool(self) -> bool {
+        // add any values here
+        let possible_boolean_trues = vec![
+            String::from("1"),
+            String::from("true"),
+            String::from("True"),
+        ];
+        return possible_boolean_trues.contains(&self);
     }
 }
