@@ -63,8 +63,11 @@ fn get_command_reply(command: Command, message_text: String) -> String {
 
  - [x] Working message retrieval
  - [x] Somewhat working message posting
- - [ ] Inbound message processing
+ - [x] Inbound message processing
  - [ ] Fix tripcodes not working
- - [ ] Properly working message posting from the queue
- - [ ] Loading some of the bot commands from a `commands.yml` file
+ - [x] Properly working message posting from the queue
+ - [x] Loading some of the bot commands from a `commands.yml` file
+ - [ ] Loading executable commands from the `commands.yaml`
+ - [ ] `.help` built-in command
+ - [ ] Have a list of reserved keywords for commands, raise errors.
  - [ ] Docker
