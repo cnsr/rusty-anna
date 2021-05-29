@@ -65,7 +65,7 @@ impl ChanConnection {
             client: client,
             config: config,
             lastpost: 0u32,
-            limit: 1u8,
+            limit: 5u8, // 1u8 doesn't seem to be working like I initially intended
             queue: queue,
             raw_get_url: get_url,
             post_url: post_url,
@@ -74,17 +74,14 @@ impl ChanConnection {
         })
     }
 
-    pub fn set_lastpost(&mut self, latest: u32) {
-        self.lastpost = latest;
-    }
-
     // why cant this be something like pyhton @property tho
     pub fn get_url(&self) -> String {
-        let mut result = format!("{}?count={}", self.raw_get_url, self.limit);
+        let mut result = format!("{}?limit={}", self.raw_get_url, self.limit);
         if self.lastpost != 0u32 {
-            result = format!("{}?count={}", result, self.lastpost);
+            result = format!("{}&count={}", result, self.lastpost);
         }
-        println!("{}", result);
+        println!("Retrieving get_url: {:#?} {:#?} {:#?}", self.raw_get_url, self.limit, self.lastpost);
+        println!("Result url: {}", result);
         return result;
     }
 
@@ -96,20 +93,25 @@ impl ChanConnection {
         return format!(">>{}\n{}", postnumber, text);
     }
 
-    pub async fn add_to_queue(&mut self, message: InboundMessage) -> Result<(), anyhow::Error> {
+    pub async fn add_to_queue(&mut self, mut message: InboundMessage) -> Result<(), anyhow::Error> {
         //  TODO: check for messages in the outbound history
         let is_bot = self.queue.check_if_outbound(message.clone()).await?;
         self.lastpost = message.count;
-        self.queue.add_to_queue(message.clone(), is_bot).await?;
-        println!("Message {:#?} is a bot message: {:#?}", message, is_bot);
-        if !is_bot {
-            match self.commands.check_against_commands(message.clone().body) {
-                Some (reply_text) => {
-                    let new_message = self.construct_reply(message, reply_text);
-                    self.add_to_outbound_queue(new_message).await?;
-                    return Ok(());
-                },
-                _ => {}
+        // TODO: check if was added to queue
+        let added_to_queue = self.queue.add_to_queue(message.clone(), is_bot).await?;
+        if added_to_queue {
+            println!("Added a message to the queue: {:#?}", message.count);
+            println!("count: {:#?}\t is_bot: {:#?}\t is_replied_to {:#?}", message.count, is_bot, message.replied_to);
+            if !is_bot && message.replied_to != Some(true) {
+                match self.commands.check_against_commands(message.clone().body) {
+                    Some (reply_text) => {
+                        // message.replied_to = Some(true);
+                        let new_message = self.construct_reply(message, reply_text);
+                        self.add_to_outbound_queue(new_message).await?;
+                        return Ok(());
+                    },
+                    _ => {}
+                }
             }
         }
         Ok(())
@@ -123,11 +125,13 @@ impl ChanConnection {
             trip: Some(self.config.trip.clone()),
             body: self.construct_reply_text(raw_text, Some(message.count)),
             convo: message.convo,
+            reply_to: Some(message.count),
         };
     }
 
-    pub async fn process_messages(&mut self, messages: Vec<InboundMessage>) -> Result<(), anyhow::Error> {
+    pub async fn process_messages(&mut self, mut messages: Vec<InboundMessage>) -> Result<(), anyhow::Error> {
         // TODO: implement
+        messages.reverse();
         for message in messages {
             self.add_to_queue(message).await?;
         }
@@ -152,7 +156,9 @@ impl ChanConnection {
     }
 
     pub async fn add_to_outbound_queue(&mut self, message: OutboundMessage) -> Result<(), anyhow::Error> {
-        self.queue.add_to_outbound_queue(message).await?;
+        if !self.queue.contains(message.clone()) {
+            self.queue.add_to_outbound_queue(message).await?;
+        }
         Ok(())
     }
 
@@ -161,9 +167,7 @@ impl ChanConnection {
 
         let response = self.client
             .post(&self.post_url)
-            // .post("https://jsonplaceholder.typicode.com/posts")
             .headers(self.headers())
-            // .form(&serialized_message)
             .json(&serialized_message)
             .send()
             .await?
@@ -177,13 +181,20 @@ impl ChanConnection {
     pub async fn attempt_sending_outbound(&mut self) -> Result<(), anyhow::Error> {
         match self.queue.first_to_send() {
             Some(message) => {
-                println!("Sending: {:?}", message);
+                println!("Sending out: {:?}", message);
                 let result: bool = self.send_message(message.clone()).await?;
+                println!("Sending out status: {:?}", result);
                 match result {
-                    false => {
+                    true => {
                         self.queue.append_as_first(message);
                     },
-                    _ => return Ok(())
+                    false => {
+                        if message.reply_to != None {
+                            self.queue.mark_as_replied_to(message.reply_to.unwrap_or(0u32)).await?;
+                        }
+                        self.queue.add_to_outbound_history(message).await?;
+                        return Ok(());
+                    }
                 }
                 return Ok(());
             },
@@ -203,6 +214,7 @@ impl ChanConnection {
             .await?;
             
         let messages: Vec<InboundMessage> = serde_json::from_str(&response).unwrap();
+        // println!("Messages: \n{:#?}", messages.clone());
 
         self.process_messages(messages).await?;
         Ok(())

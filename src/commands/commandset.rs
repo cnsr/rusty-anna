@@ -104,9 +104,7 @@ impl CommandSet {
                                     Ok(command) => {
                                         initial_commands.push(command);
                                     }, _ => ()
-
                                 }
-                                // TODO: match command and if not error, add to commands
                             }
                         }
                         Ok(Self {

@@ -59,6 +59,7 @@ async fn main() -> Result<(), anyhow::Error> {
             trip: Some(String::from("test")),
             body: String::from("Connected to the chat."),
             convo: String::from("GeneralDEBUG"),
+            reply_to: None,
         };
 
         // notify about successful connection
@@ -66,6 +67,7 @@ async fn main() -> Result<(), anyhow::Error> {
         con.attempt_sending_outbound().await?;
 
         // timeout should be at the very least 1 second between running the loop cycles
+        // TODO: cleanup
         sleep(Duration::from_millis(1000)).await;
     }
 }

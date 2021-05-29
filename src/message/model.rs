@@ -11,6 +11,7 @@ pub struct OutboundMessage {
     pub trip: Option<String>,
     pub body: String,
     pub convo: String,
+    pub reply_to: Option<u32>
 }
 
 // known failures: "database_update_error", "countdown_violation"
@@ -55,11 +56,18 @@ pub struct InboundMessage {
     pub image_filename: Option<String>,
     pub image: Option<String>,
     pub duration: Option<f32>,
+    pub replied_to: Option<bool>,
 }
 
 impl PartialEq for InboundMessage {
     fn eq(&self, other: &Self) -> bool {
         return self.count == other.count;
+    }
+}
+
+impl PartialEq for OutboundMessage {
+    fn eq(&self, other: &Self) -> bool {
+        return self.convo == other.convo && self.reply_to == other.reply_to;
     }
 }
 
@@ -78,7 +86,6 @@ impl PartialEq<InboundMessage> for OutboundMessage {
         return self.body == other.body && self.convo == other.convo;
     }
 }
-
 
 #[derive(Debug)]
 pub struct MessageQueue {
@@ -114,6 +121,21 @@ impl FirstPoppable for Vec<OutboundMessage> {
     }
 }
 
+trait MarkAsRepliedTo {
+    fn mark(&mut self, message_id: u32);
+}
+
+impl MarkAsRepliedTo for Vec<InboundMessage> {
+    fn mark(&mut self, message_id: u32) {
+        for message in self {
+            if message.count == message_id {
+                message.replied_to = Some(true);
+            }
+        }
+    }
+
+}
+
 impl MessageQueue {
     //  TODO: LIMITs from .env
     pub async fn init() -> Result<Self> {
@@ -145,7 +167,16 @@ impl MessageQueue {
         Ok(())
     }
 
-    pub async fn add_to_queue(&mut self, message: InboundMessage, is_bot: bool) -> Result<()> {
+    pub async fn mark_as_replied_to(&mut self, reply_to: u32) -> Result<(), anyhow::Error> {
+        if reply_to != 0u32 { self.messages.mark(reply_to); }
+        Ok(())
+    }
+
+    pub fn contains(&self, message: OutboundMessage) -> bool {
+        return self.outbound_messages.contains(&message) || self.outbound_messages_history.contains(&message);
+    }
+
+    pub async fn add_to_queue(&mut self, message: InboundMessage, is_bot: bool) -> Result<bool, anyhow::Error> {
         match is_bot {
             true => {
                 // contains should re-implemented to check by postcount?
@@ -155,19 +186,21 @@ impl MessageQueue {
                         self.bot_messages.remove(0);
                     }
                     self.bot_messages.push(message);
+                    return Ok(true);
                 }
             },
             false => {
                 if !self.messages.contains(&message) {
-                    // only store 20 latest message - maybe even less? dont need to have that many messages saved lol
+                    // only store 50 latest message - maybe even less? dont need to have that many messages saved lol
                     if self.messages.len() > 20 as usize {
                         self.messages.remove(0);
                     }
                     self.messages.push(message);
+                    return Ok(true);
                 }
             }
         }
-        Ok(())
+        Ok(false)
     }
 
     pub async fn add_to_history(&mut self, message: InboundMessage) -> Result<(), anyhow::Error> {
