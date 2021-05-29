@@ -46,6 +46,7 @@ pub struct ChanConnection {
 
 impl ChanConnection {
     pub async fn init(
+        accept_invalid_certs: bool,
         anna_cookie: String,
         get_url: String,
         post_url: String,
@@ -53,6 +54,7 @@ impl ChanConnection {
         trip: String,
     ) -> Result<Self, anyhow::Error> {
         let client = reqwest::Client::builder()
+            .danger_accept_invalid_certs(accept_invalid_certs)
             .cookie_store(true)
             .build()?;
         let queue = MessageQueue::init().await?;

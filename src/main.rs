@@ -23,6 +23,15 @@ async fn main() -> Result<(), anyhow::Error> {
     let anna_cookie = env::var("ANNA_COOKIE")
         .expect("ANNA_COOKIE is not set in the .env file");
     // let anna_cookie = "";
+    
+    let accept_invalid_certs = if (
+        env::var("ACCEPT_INVALID_CERTS")
+            .expect("ACCEPT_INVALID_CERTS is not set in the .env file")
+        ) == "1" {
+            true
+        } else {
+            false
+        };
 
     // kotchan.fun
     let domain = env::var("DOMAIN")
@@ -44,7 +53,7 @@ async fn main() -> Result<(), anyhow::Error> {
     // TODO: load chat, name and trip from env variables and save in the connection
 
     let mut con = connection::ChanConnection::init(
-        anna_cookie, get_url, post_url, name, trip
+        accept_invalid_certs, anna_cookie, get_url, post_url, name, trip
     ).await?;
     
     loop {
