@@ -14,7 +14,7 @@ pub struct OutboundMessage {
     pub reply_to: Option<u32>
 }
 
-// known failures: "database_update_error", "countdown_violation"
+// known failures: "database_update_error", "countdown_violation", "proxy"
 // known successes: "success_posting"
 #[derive(Deserialize, Debug)]
 pub struct PostResult {
@@ -28,7 +28,7 @@ impl PostResult {
         return self.success != None;
     }
     pub fn failed_to_send(&self) -> bool {
-        println!("Checking PostResult: {:#?}", self);
+        // println!("Checking PostResult: {:#?}", self);
         match &self.failure {
             Some(reason) => reason == "countdown_violation",
             None => false

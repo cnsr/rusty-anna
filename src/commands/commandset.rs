@@ -55,7 +55,7 @@ impl Command {
         return self.replies.clone().unwrap().choose(&mut rand::thread_rng()).unwrap().to_string();
     }
 
-    // TODO: implement checker for matches
+    // TODO: implement matcher for executors
     // if a string is returned, reply has to be issued
     pub fn check_against(&self, text: String) -> Option<String> {
         if self.regex.is_match(&text) {
@@ -63,7 +63,7 @@ impl Command {
                 return Some(self.get_reply());
             } else {
                 // execute script
-                return Some(String::from("Requested command execution"));
+                return Some(String::from("It's always sunny in philadelphia"));
             }
         }
         None
@@ -73,13 +73,16 @@ impl Command {
 #[derive(Debug, Clone)]
 pub struct CommandSet {
     pub commands: Vec<Command>,
+    pub help: Regex,
 }
 
 impl CommandSet {
     pub async fn init() -> Result<Self, anyhow::Error> {
         let mut initial_commands = Vec::new();
+        let help = Regex::new(r"^\.help$").unwrap();
         let initial = Self {
             commands: Vec::new(),
+            help: help.clone(),
         };
         // TODO: load from a Path filename (supplied in the .env?)
         match Path::new("commands.yml").exists() {
@@ -109,6 +112,7 @@ impl CommandSet {
                         }
                         Ok(Self {
                             commands: initial_commands,
+                            help: help,
                         })
                     },
                     Err(error) => Err(anyhow::Error::new(error))
@@ -119,6 +123,19 @@ impl CommandSet {
     }
     pub fn check_against_commands(&self, text: String) -> Option<String> {
         println!("checking {:#?}", text);
+
+        if self.help.is_match(&text.clone()) {
+            let mut result = String::from("");
+            for command in self.commands.clone().into_iter() {
+                result += &format!(
+                    "[b]{:?}[/b]  [code]{:?}[/code]\n{:?}\n",
+                    command.clone().name.unwrap(),
+                    command.clone().regex,
+                    command.get_description());
+            }
+            return Some(result);
+        }
+
         for command in self.commands.clone().into_iter() {
             match command.check_against(text.clone()) {
                 Some(result) => {

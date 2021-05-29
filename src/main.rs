@@ -45,8 +45,6 @@ async fn main() -> Result<(), anyhow::Error> {
     let get_url = format!("https://{}/last/{}/", domain, board);
     let post_url = format!("https://{}/chat/{}/", domain, board);
     
-    // TODO: load chat, name and trip from env variables and save in the connection
-
     let mut con = connection::ChanConnection::init(
         accept_invalid_certs,
         anna_cookie,
@@ -54,23 +52,22 @@ async fn main() -> Result<(), anyhow::Error> {
         name, trip
     ).await?;
     
+    // TODO: remove?
+    let _greeting = message::OutboundMessage {
+        chat: String::from("int"),
+        name: Some(String::from("salobot")),
+        trip: Some(String::from("test")),
+        body: String::from("Connected to the chat."),
+        convo: String::from("GeneralDEBUG"),
+        reply_to: None,
+    };
+    con.add_to_outbound_queue(_greeting).await?;
+
     loop {
         // retrieve the latest messages
         con.get_and_process_messages().await?;
 
-        // TODO: move out of the loop
-        // this is temporary
-        let _greeting = message::OutboundMessage {
-            chat: String::from("int"),
-            name: Some(String::from("salobot")),
-            trip: Some(String::from("test")),
-            body: String::from("Connected to the chat."),
-            convo: String::from("GeneralDEBUG"),
-            reply_to: None,
-        };
-
         // notify about successful connection
-        // con.add_to_outbound_queue(_greeting).await?;
         con.attempt_sending_outbound().await?;
 
         // timeout should be at the very least 1 second between running the loop cycles

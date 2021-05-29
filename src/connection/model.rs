@@ -35,12 +35,6 @@ pub struct ChanConnection {
     pub post_url: String,
     pub anna_cookie: String,
     commands: CommandSet,
-    /*
-        TODO: implement a way to store a set of outbound messages (as InboundMessage)
-        Would be great for the API to properly function first i guess else it's gonna be fugly
-
-        btw isnt this already implemented?
-    */
 }
 
 
@@ -57,6 +51,7 @@ impl ChanConnection {
             .danger_accept_invalid_certs(accept_invalid_certs)
             .cookie_store(true)
             .build()?;
+
         let queue = MessageQueue::init().await?;
 
         let config = BotConfiguration::init(name, trip).await?;
@@ -96,10 +91,8 @@ impl ChanConnection {
     }
 
     pub async fn add_to_queue(&mut self, mut message: InboundMessage) -> Result<(), anyhow::Error> {
-        //  TODO: check for messages in the outbound history
         let is_bot = self.queue.check_if_outbound(message.clone()).await?;
         self.lastpost = message.count;
-        // TODO: check if was added to queue
         let added_to_queue = self.queue.add_to_queue(message.clone(), is_bot).await?;
         if added_to_queue {
             println!("Added a message to the queue: {:#?}", message.count);
@@ -132,7 +125,6 @@ impl ChanConnection {
     }
 
     pub async fn process_messages(&mut self, mut messages: Vec<InboundMessage>) -> Result<(), anyhow::Error> {
-        // TODO: implement
         messages.reverse();
         for message in messages {
             self.add_to_queue(message).await?;
