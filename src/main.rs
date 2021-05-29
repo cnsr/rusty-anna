@@ -19,11 +19,6 @@ use dotenv::dotenv;
 async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
     
-    // anna_nolimit_cookie1
-    let anna_cookie = env::var("ANNA_COOKIE")
-        .expect("ANNA_COOKIE is not set in the .env file");
-    // let anna_cookie = "";
-    
     let accept_invalid_certs = if (
         env::var("ACCEPT_INVALID_CERTS")
             .expect("ACCEPT_INVALID_CERTS is not set in the .env file")
@@ -33,6 +28,11 @@ async fn main() -> Result<(), anyhow::Error> {
             false
         };
 
+    // anna_nolimit_cookie1
+    let anna_cookie = env::var("ANNA_COOKIE")
+        .expect("ANNA_COOKIE is not set in the .env file");
+    // let anna_cookie = "";
+    
     // kotchan.fun
     let domain = env::var("DOMAIN")
         .expect("DOMAIN is not set in the .env file");
