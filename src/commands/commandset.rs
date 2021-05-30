@@ -10,6 +10,7 @@ use std::fs;
 use std::path::Path;
 use regex::Regex;
 use rand::seq::SliceRandom;
+use log::{info, warn, error, debug};
 
 #[derive(Debug, Clone)]
 pub struct Command {
@@ -102,7 +103,7 @@ impl CommandSet {
                                     raw_command.extract_vec("replies"),
                                     raw_command.extract_string("execute"),
                                 );
-                                println!("entry: {:?}", parsed_command);
+                                info!("Command entry: {:?}", parsed_command);
                                 match parsed_command {
                                     Ok(command) => {
                                         initial_commands.push(command);
@@ -122,8 +123,6 @@ impl CommandSet {
         }
     }
     pub fn check_against_commands(&self, text: String) -> Option<String> {
-        println!("checking {:#?}", text);
-
         if self.help.is_match(&text.clone()) {
             let mut result = String::from("");
             for command in self.commands.clone().into_iter() {
@@ -132,14 +131,15 @@ impl CommandSet {
                     command.clone().name.unwrap(),
                     command.clone().regex,
                     command.get_description());
+                }
+                return Some(result);
             }
-            return Some(result);
-        }
-
-        for command in self.commands.clone().into_iter() {
-            match command.check_against(text.clone()) {
+            
+            for command in self.commands.clone().into_iter() {
+                info!("checking regex {:?} against '{:#?}'", command.regex, text);
+                match command.check_against(text.clone()) {
                 Some(result) => {
-                    println!("COMMAND MATCH ON TEXT: {:#?} FOR COMMAND: {:#?}", text, command);
+                    debug!("COMMAND MATCH ON TEXT: {:#?} FOR COMMAND: {:#?}", text, command);
                     return Some(result);
                 },
                 _ => {}
@@ -156,7 +156,6 @@ trait ExtractString {
 
 impl ExtractString for LinkedHashMap<Yaml, Yaml> {
     fn extract_string(&mut self, value: &str) -> Option<String> {
-        // println!("Extracting {:?} from {:?}", value, self);
         match self.get(&Yaml::from_str(value)) {
             Some (value) => {
                 value.to_owned().into_string()
@@ -164,7 +163,6 @@ impl ExtractString for LinkedHashMap<Yaml, Yaml> {
         }
     }
     fn extract_vec(&mut self, value: &str) -> Option<Vec<String>> {
-        // println!("Extracting {:?} from {:?}", value, self);
         match self.get(&Yaml::from_str(value)) {
             Some (value) => {
                 let mut result = Vec::new();

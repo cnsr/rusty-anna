@@ -1,8 +1,6 @@
-// #![feature(in_band_lifetimes)]
-
-use futures::future::Either;
 use serde::{Deserialize, Serialize};
 use anyhow::Result;
+use log::{info, warn, error, debug};
 
 #[derive(Serialize, Debug, Clone)]
 pub struct OutboundMessage {
@@ -28,7 +26,7 @@ impl PostResult {
         return self.success != None;
     }
     pub fn failed_to_send(&self) -> bool {
-        // println!("Checking PostResult: {:#?}", self);
+        debug!("Checking PostResult: {:#?}", self);
         match &self.failure {
             Some(reason) => reason == "countdown_violation",
             None => false

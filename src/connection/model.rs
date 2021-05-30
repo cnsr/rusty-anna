@@ -4,6 +4,7 @@ extern crate serde_json;
 
 // external
 use http::{HeaderMap, HeaderValue, header::{COOKIE}};
+use log::{info, warn, error, debug};
 
 // local
 use crate::message::{InboundMessage, MessageQueue, OutboundMessage, PostResult};
@@ -77,8 +78,8 @@ impl ChanConnection {
         if self.lastpost != 0u32 {
             result = format!("{}&count={}", result, self.lastpost);
         }
-        println!("Retrieving get_url: {:#?} {:#?} {:#?}", self.raw_get_url, self.limit, self.lastpost);
-        println!("Result url: {}", result);
+        debug!("Retrieving get_url: {:#?} {:#?} {:#?}", self.raw_get_url, self.limit, self.lastpost);
+        info!("Result url: {}", result);
         return result;
     }
 
@@ -95,8 +96,8 @@ impl ChanConnection {
         self.lastpost = message.count;
         let added_to_queue = self.queue.add_to_queue(message.clone(), is_bot).await?;
         if added_to_queue {
-            println!("Added a message to the queue: {:#?}", message.count);
-            println!("count: {:#?}\t is_bot: {:#?}\t is_replied_to {:#?}", message.count, is_bot, message.replied_to);
+            debug!("Added a message to the queue: {:#?}", message.count);
+            debug!("count: {:#?}\t is_bot: {:#?}\t is_replied_to {:#?}", message.count, is_bot, message.replied_to);
             if !is_bot && message.replied_to != Some(true) {
                 match self.commands.check_against_commands(message.clone().body) {
                     Some (reply_text) => {
@@ -175,9 +176,9 @@ impl ChanConnection {
     pub async fn attempt_sending_outbound(&mut self) -> Result<(), anyhow::Error> {
         match self.queue.first_to_send() {
             Some(message) => {
-                println!("Sending out: {:?}", message);
+                debug!("Sending out: {:?}", message);
                 let result: bool = self.send_message(message.clone()).await?;
-                println!("Sending out status: {:?}", result);
+                debug!("Sending out status: {:?}", result);
                 match result {
                     true => {
                         self.queue.append_as_first(message);
@@ -208,7 +209,6 @@ impl ChanConnection {
             .await?;
             
         let messages: Vec<InboundMessage> = serde_json::from_str(&response).unwrap();
-        // println!("Messages: \n{:#?}", messages.clone());
 
         self.process_messages(messages).await?;
         Ok(())

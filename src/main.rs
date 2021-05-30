@@ -1,6 +1,7 @@
 use std::env;
 // use std::path::Path;
 use tokio::time::{sleep, Duration};
+use log::LevelFilter;
 
 extern crate dotenv;
 extern crate reqwest;
@@ -11,13 +12,18 @@ extern crate anyhow;
 mod connection;
 mod message;
 mod commands;
+mod logger;
 
 // external crates
 use dotenv::dotenv;
 
+static LOGGER: logger::AnnaLogger = logger::AnnaLogger;
+
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
+
+    log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Info)).unwrap();
     
     // anna_nolimit_cookie1
     let anna_cookie = env::var("ANNA_COOKIE")
