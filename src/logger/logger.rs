@@ -1,10 +1,10 @@
 use log::{Record, Level, Metadata};
 use std::{fs::OpenOptions, io::Write, path::Path};
-// TODO: look into tokio::time usage
 use chrono::prelude::*;
 
 pub struct AnnaLogger;
 
+// TODO: check the size of the logfile, cleanup if needed?
 impl log::Log for AnnaLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= Level::Info
@@ -18,7 +18,7 @@ impl log::Log for AnnaLogger {
         }
         let create = Path::new(logfile).exists();
         let mut file = OpenOptions::new()
-            .create(create)
+            .create(!create)
             .write(true)
             .append(true)
             .open(logfile)
