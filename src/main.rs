@@ -93,6 +93,7 @@ impl IntoBool for String {
             String::from("1"),
             String::from("true"),
             String::from("True"),
+            String::from("TRUE"),
         ];
         return possible_boolean_trues.contains(&self);
     }
