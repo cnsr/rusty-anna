@@ -18,10 +18,17 @@ struct Score {
     score: u16,
 }
 
+impl Score {
+    fn display(&mut self) -> String {
+        format!("{:?}:    {:?}\n", self.name.clone(), self.score.clone())
+    }
+}
+
 trait OperateScores {
     fn list_hiscores(&mut self) -> String;
     fn sort_hiscores(&mut self);
-    fn update_hiscore(&mut self, id: String);
+    fn update_hiscore(&mut self, id: String, name: String);
+    fn contains_score(&self, id: String) -> bool;
     fn write_to_file(&mut self);
 }
 
@@ -32,15 +39,36 @@ impl OperateScores for Vec<Score> {
         }
         String::from("Not yet implemented.")
     }
+
     fn sort_hiscores(&mut self) {
         self.sort_by_key(|score| score.score);
     }
 
-    fn update_hiscore(&mut self, id: String) {
-        for score in self {
-            if score.id == id && score.score != u16::MAX {
-                score.score += 1;
+    fn contains_score(&self, id: String) -> bool {
+        // this is probably inefficient
+        for elem in self {
+            if elem.id == id {
+                return true
+            };
+        }
+        false
+    }
+
+    fn update_hiscore(&mut self, id: String, name: String) {
+        if self.contains_score(id.clone()) {
+            for score in self {
+                if score.id == id && score.score != u16::MAX {
+                    score.score += 1;
+                    // names are updated as they might change, and the IDs shouldn't
+                    score.name = name.clone();
+                }
             }
+        } else {
+            self.push(Score {
+                name: name,
+                id: id,
+                score: 1
+            })
         }
     }
 
@@ -108,12 +136,25 @@ impl HangmanGame {
         result.into_iter().collect()
     }
 
-    fn check_win(&mut self) -> bool {
-        // TODO: add implementation
-        false
+    fn display_hiscores(&mut self) -> String {
+        let mut result =  String::new();
+        for entry in self.hiscores.iter_mut() {
+            result += &entry.display();
+        }
+        result
     }
 
-    pub fn make_a_guess(&mut self, letter: char, user: String) -> String {
+    fn check_win(&mut self) -> bool {
+        // gets all characters from a word and checks against the guessed chars
+        // with only non-guessed characters remaining, win condition being no chars left
+
+        let mut word_as_chars: Vec<char> = self.word.chars().collect();
+        word_as_chars.retain(|cleaned_char| !self.guessed.contains(cleaned_char));
+
+        return word_as_chars.len() == 0;
+    }
+
+    pub fn make_a_guess(&mut self, letter: char, user_id: String, user_name: String) -> String {
         if self.guessed.contains(&letter) {
             return String::from("Letter has already been guessed.");
         }
@@ -124,8 +165,7 @@ impl HangmanGame {
                 result = String::from("You won! Full word:\n");
                 result += &self.display_word();
 
-
-                self.hiscores.update_hiscore(user);
+                self.hiscores.update_hiscore(user_id, user_name);
                 self.assign_new_word();
 
                 return result;
