@@ -12,6 +12,8 @@ use regex::Regex;
 use rand::seq::SliceRandom;
 use log::{info, warn, error, debug};
 
+use crate::commands::hangman;
+
 #[derive(Debug, Clone)]
 pub struct Command {
     pub name: Option<String>,
@@ -59,12 +61,23 @@ impl Command {
     // TODO: implement matcher for executors
     // if a string is returned, reply has to be issued
     pub fn check_against(&self, text: String) -> Option<String> {
+        let not_implemented = Some("not implemented".to_string());
         if self.regex.is_match(&text) {
             if self.replies != None {
                 return Some(self.get_reply());
             } else {
                 // execute script
-                return Some(String::from("It's always sunny in philadelphia"));
+                match self.execute.clone().unwrap_or_default().as_str() {
+                    "hangman.play" => {
+                        return not_implemented;
+                    },
+                    "hangman.score" => {
+                        return not_implemented;
+                    },
+                    _ => {
+                        return not_implemented;
+                    }
+                }
             }
         }
         None
