@@ -11,7 +11,7 @@ use serde::{Serialize, Deserialize};
 
 use log::{info, warn, error, debug};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Score {
     name: String,
     id: String,
@@ -79,29 +79,31 @@ impl OperateScores for Vec<Score> {
     }
 }
 
-struct HangmanGame {
+#[derive(Debug, Clone)]
+pub struct HangmanGame {
     word: String,
     guessed: Vec<char>,
     words: Vec<String>,
     hiscores: Vec<Score>,
 }
 
+// TODO: write results to file and read them from file for each operation :/
 impl HangmanGame {
-    async fn init() -> Result<Self, anyhow::Error> {
+    pub fn init() -> Result<Self, anyhow::Error> {
         let mut game = Self {
             word: String::from("initial"),
             guessed: vec!(),
             words: vec!(),
             hiscores: vec!(),
         };
-        game.load_words().await?;
+        game.load_words();
         game.assign_new_word();
         game.hiscores = game.read_from_file();
 
         Ok(game)
     }
 
-    async fn load_words(&mut self) -> Result<Vec<Score>, anyhow::Error> {
+    fn load_words(&mut self) -> Result<Vec<Score>, anyhow::Error> {
         Ok(vec!())
     }
 
