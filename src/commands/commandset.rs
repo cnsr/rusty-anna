@@ -130,14 +130,15 @@ impl CommandSet {
                     "[b]{:?}[/b]  [code]{:?}[/code]\n{:?}\n",
                     command.clone().name.unwrap(),
                     command.clone().regex,
-                    command.get_description());
-                }
-                return Some(result);
+                    command.get_description()
+                );
             }
+            return Some(result);
+        }
             
-            for command in self.commands.clone().into_iter() {
-                info!("checking regex {:?} against '{:#?}'", command.regex, text);
-                match command.check_against(text.clone()) {
+        for command in self.commands.clone().into_iter() {
+            info!("checking regex {:?} against '{:#?}'", command.regex, text);
+            match command.check_against(text.clone()) {
                 Some(result) => {
                     debug!("COMMAND MATCH ON TEXT: {:#?} FOR COMMAND: {:#?}", text, command);
                     return Some(result);
