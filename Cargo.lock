@@ -447,6 +447,7 @@ dependencies = [
  "dotenv",
  "futures",
  "http",
+ "lazy_static",
  "linked-hash-map",
  "log",
  "rand",

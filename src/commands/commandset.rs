@@ -4,6 +4,7 @@ extern crate linked_hash_map;
 extern crate regex;
 extern crate rand;
 
+use lazy_static::__Deref;
 use yaml_rust::{YamlLoader, Yaml};
 use linked_hash_map::LinkedHashMap;
 use std::fs;
@@ -11,6 +12,13 @@ use std::path::Path;
 use regex::Regex;
 use rand::seq::SliceRandom;
 use log::{info, warn, error, debug};
+use lazy_static::lazy_static;
+
+use crate::commands::hangman::HangmanGame;
+
+lazy_static! {
+    pub static ref HANGMAN: HangmanGame = HangmanGame::init().unwrap();
+}
 
 #[derive(Debug, Clone)]
 pub struct Command {
@@ -19,6 +27,7 @@ pub struct Command {
     pub regex: Regex,
     pub replies: Option<Vec<String>>,
     pub execute: Option<String>,
+    pub hangman: Option<&'static HangmanGame>,
 }
 
 impl Command {
@@ -28,6 +37,7 @@ impl Command {
         description: Option<String>,
         replies: Option<Vec<String>>,
         execute: Option<String>,
+        hangman: Option<&'static HangmanGame>
     ) -> Result<Self, anyhow::Error> {
         if replies == None && execute == None {
             let error_text = format!("Command {} does not provide either of replies or executor", regex);
@@ -41,6 +51,7 @@ impl Command {
             regex: compiled_regex,
             replies: replies,
             execute: execute,
+            hangman: hangman,
         })
     }
 
@@ -59,12 +70,23 @@ impl Command {
     // TODO: implement matcher for executors
     // if a string is returned, reply has to be issued
     pub fn check_against(&self, text: String) -> Option<String> {
+        let not_implemented = Some("not implemented".to_string());
         if self.regex.is_match(&text) {
             if self.replies != None {
                 return Some(self.get_reply());
             } else {
                 // execute script
-                return Some(String::from("It's always sunny in philadelphia"));
+                match self.execute.clone().unwrap_or_default().as_str() {
+                    "hangman.play" => {
+                        return not_implemented;
+                    },
+                    "hangman.score" => {
+                        return not_implemented;
+                    },
+                    _ => {
+                        return not_implemented;
+                    }
+                }
             }
         }
         None
@@ -94,14 +116,27 @@ impl CommandSet {
                     Ok(yamls) => {
                         for doc in yamls {
                             let commands = doc.into_hash().unwrap().get(&Yaml::from_str("commands")).unwrap().to_owned();
+                            // let hangman_instance = HangmanGame::init().await?;
                             for entry in commands.into_hash().unwrap() {
                                 let mut raw_command = entry.1.into_hash().unwrap();
+                                let mut use_hangman = false;
+                                match raw_command.extract_string("execute") {
+                                    Some(executor) => {
+                                        match &executor[..] {
+                                            "hangman.play" | "hangman.score" => {
+                                                use_hangman = true;
+                                            },
+                                            _ => ()
+                                        }
+                                    }, _ => {}
+                                }
                                 let parsed_command = Command::init(
                                     entry.0.into_string(),
                                     raw_command.extract_string("regex").unwrap(),
                                     raw_command.extract_string("description"),
                                     raw_command.extract_vec("replies"),
                                     raw_command.extract_string("execute"),
+                                    if use_hangman {Some(HANGMAN.deref())} else {None},
                                 );
                                 info!("Command entry: {:?}", parsed_command);
                                 match parsed_command {
